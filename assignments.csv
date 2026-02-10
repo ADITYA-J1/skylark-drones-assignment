@@ -1,0 +1,3 @@
+project_id,pilot_id,drone_id,start_date,end_date
+PRJ001,P001,D001,2026-02-06,2026-02-08
+PRJ002,,,2026-02-07,2026-02-09
