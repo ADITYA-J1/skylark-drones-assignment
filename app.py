@@ -6,11 +6,13 @@ import streamlit as st
 
 from src.agent import run_agent
 
+
 def _rerun():
     try:
         st.rerun()
     except AttributeError:
         st.experimental_rerun()
+
 
 st.set_page_config(page_title="Drone Operations Coordinator", page_icon="🚁", layout="centered")
 st.title("🚁 Drone Operations Coordinator")
@@ -26,7 +28,7 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 # Input
-if prompt := st.chat_input("Ask about pilots, drones, assignments, or conflicts..."):
+if prompt := st.chat_input("Ask about pilots, drones, assignments, conflicts, or status updates..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -40,22 +42,35 @@ if prompt := st.chat_input("Ask about pilots, drones, assignments, or conflicts.
             reply = str(e)
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
-# Sidebar shortcuts
+# Sidebar
 with st.sidebar:
     st.header("Quick actions")
     if st.button("Check conflicts"):
         st.session_state.messages.append({"role": "user", "content": "Check conflicts"})
-        reply, _ = run_agent("Check conflicts")
+        try:
+            reply, _ = run_agent("Check conflicts")
+        except Exception as e:
+            reply = str(e)
         st.session_state.messages.append({"role": "assistant", "content": reply})
         _rerun()
     if st.button("List missions"):
         st.session_state.messages.append({"role": "user", "content": "List all projects"})
-        reply, _ = run_agent("List all projects")
+        try:
+            reply, _ = run_agent("List all projects")
+        except Exception as e:
+            reply = str(e)
         st.session_state.messages.append({"role": "assistant", "content": reply})
         _rerun()
+    if st.button("Clear chat"):
+        st.session_state.messages = []
+        _rerun()
     st.divider()
-    st.markdown("**Examples:**")
-    st.markdown("- Who is available in Bangalore?")
-    st.markdown("- Suggest assignment for PRJ001")
-    st.markdown("- Urgent reassignment for PRJ002")
-    st.markdown("- Set pilot P004 status to Available")
+    with st.expander("What can I ask?"):
+        st.markdown("- *Who is available in Bangalore?*")
+        st.markdown("- *Pilots with DGCA certification*")
+        st.markdown("- *Drones in Mumbai*")
+        st.markdown("- *Suggest assignment for PRJ001*")
+        st.markdown("- *Urgent reassignment for PRJ002*")
+        st.markdown("- *Check conflicts*")
+        st.markdown("- *Set pilot P004 status to On Leave*")
+        st.markdown("- *Confirm reassignment PRJ002 to P002 and D003*")

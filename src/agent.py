@@ -57,8 +57,12 @@ def get_intent(user_message: str) -> str:
     if any(w in k for w in ("set", "update", "change", "mark", "status")):
         return "status_update"
 
-    if any(w in k for w in ("help", "what can", "how", "list")):
+    if any(w in k for w in ("help", "what can", "how")):
         return "help"
+
+    # List/show missions or projects
+    if ("mission" in k or "project" in k or "projects" in k) and (len(msg) < 50 or "list" in k or "show" in k or "all" in k):
+        return "missions"
 
     if "confirm" in k and ("reassign" in k or "assign" in k):
         return "confirm_reassign"
@@ -69,33 +73,39 @@ def get_intent(user_message: str) -> str:
 def run_agent(user_message: str) -> Tuple[str, Optional[dict]]:
     """
     Process user message and return (reply_text, optional_structured_data for UI).
+    Handles load/sync errors gracefully with a clear message.
     """
-    client = get_sheets_client_cached()
-    pilots = load_pilots(client)
-    drones = load_drones(client)
-    missions = load_missions(client)
-    raw_assignments = load_assignments(client)
-    assignments = raw_assignments if raw_assignments else build_assignments_from_roster_and_missions(
-        pilots, missions
-    )
-    # Enrich assignments with drone current_assignment from fleet
-    for d in drones:
-        a = (d.get("current_assignment") or "").strip()
-        if a and a not in ("–", "-") and not any(
-            (x.get("drone_id") or "").strip() == (d.get("drone_id") or "").strip()
-            and (x.get("project_id") or "").strip() == a
-            for x in assignments
-        ):
-            proj = next((m for m in missions if (m.get("project_id") or "").strip() == a), None)
-            if proj:
-                assignments = list(assignments)
-                assignments.append({
-                    "project_id": a,
-                    "pilot_id": None,
-                    "drone_id": d.get("drone_id"),
-                    "start_date": proj.get("start_date"),
-                    "end_date": proj.get("end_date"),
-                })
+    try:
+        client = get_sheets_client_cached()
+        pilots = load_pilots(client)
+        drones = load_drones(client)
+        missions = load_missions(client)
+        raw_assignments = load_assignments(client)
+        assignments = list(raw_assignments) if raw_assignments else build_assignments_from_roster_and_missions(
+            pilots, missions
+        )
+        # Enrich assignments with drone current_assignment from fleet (no duplicates)
+        seen = {(str(x.get("drone_id") or "").strip(), str(x.get("project_id") or "").strip()) for x in assignments if x.get("drone_id")}
+        for d in drones:
+            a = (d.get("current_assignment") or "").strip()
+            if a and a not in ("–", "-"):
+                did = (d.get("drone_id") or "").strip()
+                if did and (did, a) not in seen:
+                    proj = next((m for m in missions if (m.get("project_id") or "").strip() == a), None)
+                    if proj:
+                        assignments.append({
+                            "project_id": a,
+                            "pilot_id": None,
+                            "drone_id": d.get("drone_id"),
+                            "start_date": proj.get("start_date"),
+                            "end_date": proj.get("end_date"),
+                        })
+                        seen.add((did, a))
+    except Exception as e:
+        return (
+            f"**Could not load data.** Please check your connection and sheet/CSV setup.\n\nError: {e!s}",
+            None,
+        )
 
     intent = get_intent(user_message)
 
@@ -284,8 +294,7 @@ def run_agent(user_message: str) -> Tuple[str, Optional[dict]]:
             None,
         )
 
-    # unknown or generic: try to list missions or give short summary
-    if "mission" in _intent_keywords(user_message) or "project" in _intent_keywords(user_message):
+    if intent == "missions":
         if not missions:
             return "No missions loaded.", None
         lines = ["**Missions:**\n"]
