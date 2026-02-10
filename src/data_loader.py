@@ -22,12 +22,33 @@ def _csv_path(name: str) -> str:
     return str(BASE_DIR / f"{name}.csv")
 
 
+def _sheet_name_pilots() -> Optional[str]:
+    """Worksheet name for pilots; use whenever configured, not only for single workbook."""
+    s = (config.SHEET_NAME_PILOTS or "").strip()
+    return s if s else None
+
+
+def _sheet_name_drones() -> Optional[str]:
+    s = (config.SHEET_NAME_DRONES or "").strip()
+    return s if s else None
+
+
+def _sheet_name_missions() -> Optional[str]:
+    s = (config.SHEET_NAME_MISSIONS or "").strip()
+    return s if s else None
+
+
+def _sheet_name_assignments() -> Optional[str]:
+    s = (config.SHEET_NAME_ASSIGNMENTS or "").strip()
+    return s if s else None
+
+
 def load_pilots(client: Any = None) -> List[dict]:
     """Load pilot roster from Sheets or CSV."""
     if not config.USE_LOCAL_CSV and client:
         sheet_id = config.GOOGLE_SHEET_ID_PILOTS or config.SINGLE_SHEET_ID
         if sheet_id:
-            data = read_sheet_as_dicts(client, sheet_id, config.SHEET_NAME_PILOTS if config.SINGLE_SHEET_ID else None)
+            data = read_sheet_as_dicts(client, sheet_id, _sheet_name_pilots())
             if data:
                 return data
     path = _csv_path("pilot_roster")
@@ -42,7 +63,7 @@ def load_drones(client: Any = None) -> List[dict]:
     if not config.USE_LOCAL_CSV and client:
         sheet_id = config.GOOGLE_SHEET_ID_DRONES or config.SINGLE_SHEET_ID
         if sheet_id:
-            data = read_sheet_as_dicts(client, sheet_id, config.SHEET_NAME_DRONES if config.SINGLE_SHEET_ID else None)
+            data = read_sheet_as_dicts(client, sheet_id, _sheet_name_drones())
             if data:
                 return data
     path = _csv_path("drone_fleet")
@@ -57,7 +78,7 @@ def load_missions(client: Any = None) -> List[dict]:
     if not config.USE_LOCAL_CSV and client:
         sheet_id = config.GOOGLE_SHEET_ID_MISSIONS or config.SINGLE_SHEET_ID
         if sheet_id:
-            data = read_sheet_as_dicts(client, sheet_id, config.SHEET_NAME_MISSIONS if config.SINGLE_SHEET_ID else None)
+            data = read_sheet_as_dicts(client, sheet_id, _sheet_name_missions())
             if data:
                 return data
     path = _csv_path("missions")
@@ -75,9 +96,7 @@ def load_assignments(client: Any = None) -> List[dict]:
     if not config.USE_LOCAL_CSV and client:
         sheet_id = config.GOOGLE_SHEET_ID_ASSIGNMENTS or config.SINGLE_SHEET_ID
         if sheet_id:
-            data = read_sheet_as_dicts(
-                client, sheet_id, config.SHEET_NAME_ASSIGNMENTS if config.SINGLE_SHEET_ID else None
-            )
+            data = read_sheet_as_dicts(client, sheet_id, _sheet_name_assignments())
             if data:
                 return data
     path = _csv_path("assignments")

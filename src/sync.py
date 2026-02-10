@@ -9,6 +9,7 @@ from typing import Optional
 import pandas as pd
 
 import config
+from src.data_loader import _sheet_name_pilots, _sheet_name_drones
 from src.sheets_client import (
     get_sheets_client,
     find_row_by_column,
@@ -48,7 +49,7 @@ def update_pilot_status(pilot_id: str, new_status: str) -> tuple[bool, str]:
         return False, "Google Sheets not configured (no credentials)."
 
     sheet_id = config.GOOGLE_SHEET_ID_PILOTS or config.SINGLE_SHEET_ID
-    sheet_name = config.SHEET_NAME_PILOTS if config.SINGLE_SHEET_ID else None
+    sheet_name = _sheet_name_pilots()
     row = find_row_by_column(client, sheet_id, sheet_name, "pilot_id", pilot_id)
     if row == 0:
         return False, f"Pilot {pilot_id} not found in sheet."
@@ -86,7 +87,7 @@ def update_pilot_assignment(pilot_id: str, project_id: Optional[str]) -> tuple[b
     if not client:
         return False, "Google Sheets not configured."
     sheet_id = config.GOOGLE_SHEET_ID_PILOTS or config.SINGLE_SHEET_ID
-    sheet_name = config.SHEET_NAME_PILOTS if config.SINGLE_SHEET_ID else None
+    sheet_name = _sheet_name_pilots()
     row = find_row_by_column(client, sheet_id, sheet_name, "pilot_id", pilot_id)
     if row == 0:
         return False, f"Pilot {pilot_id} not found."
@@ -123,7 +124,7 @@ def update_drone_status(drone_id: str, new_status: str) -> tuple[bool, str]:
     if not client:
         return False, "Google Sheets not configured."
     sheet_id = config.GOOGLE_SHEET_ID_DRONES or config.SINGLE_SHEET_ID
-    sheet_name = config.SHEET_NAME_DRONES if config.SINGLE_SHEET_ID else None
+    sheet_name = _sheet_name_drones()
     row = find_row_by_column(client, sheet_id, sheet_name, "drone_id", drone_id)
     if row == 0:
         return False, f"Drone {drone_id} not found in sheet."
@@ -161,7 +162,7 @@ def update_drone_assignment(drone_id: str, project_id: Optional[str]) -> tuple[b
     if not client:
         return False, "Google Sheets not configured."
     sheet_id = config.GOOGLE_SHEET_ID_DRONES or config.SINGLE_SHEET_ID
-    sheet_name = config.SHEET_NAME_DRONES if config.SINGLE_SHEET_ID else None
+    sheet_name = _sheet_name_drones()
     row = find_row_by_column(client, sheet_id, sheet_name, "drone_id", drone_id)
     if row == 0:
         return False, f"Drone {drone_id} not found."
