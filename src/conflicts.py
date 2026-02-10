@@ -26,21 +26,30 @@ def detect_all_conflicts(
     """
     if assignments is None:
         assignments = build_assignments_from_roster_and_missions(pilots, missions)
+    assignments = list(assignments)
 
-    # Add drone assignments from fleet current_assignment
+    # Merge drone assignments from fleet current_assignment (no duplicates)
+    seen_drone_proj = set()
+    for a in assignments:
+        did, pid = a.get("drone_id"), a.get("project_id")
+        if did and pid:
+            seen_drone_proj.add((str(did).strip(), str(pid).strip()))
     for d in drones:
         a = (d.get("current_assignment") or "").strip()
         if a and a not in ("–", "-"):
             proj = next((m for m in missions if (m.get("project_id") or "").strip() == a), None)
             if proj:
-                assignments = list(assignments)
-                assignments.append({
-                    "project_id": a,
-                    "pilot_id": None,
-                    "drone_id": d.get("drone_id"),
-                    "start_date": proj.get("start_date"),
-                    "end_date": proj.get("end_date"),
-                })
+                did = (d.get("drone_id") or "").strip()
+                proj_id = (proj.get("project_id") or a or "").strip()
+                if did and (did, proj_id) not in seen_drone_proj:
+                    assignments.append({
+                        "project_id": a,
+                        "pilot_id": None,
+                        "drone_id": d.get("drone_id"),
+                        "start_date": proj.get("start_date"),
+                        "end_date": proj.get("end_date"),
+                    })
+                    seen_drone_proj.add((did, proj_id))
 
     out = []
     out.extend(_double_booking_pilot(assignments))

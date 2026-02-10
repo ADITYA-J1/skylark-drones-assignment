@@ -10,16 +10,24 @@ from src.fleet import get_drone_by_id, query_drones
 
 
 def _parse_date(s: Optional[str]):
+    """Parse date string; supports YYYY-MM-DD and DD/MM/YYYY. Returns None on failure."""
     if not s:
         return None
     s = (s or "").strip()[:10]
-    try:
-        return datetime.strptime(s, "%Y-%m-%d")
-    except Exception:
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
         try:
-            return datetime.strptime(s, "%d/%m/%Y")
+            return datetime.strptime(s, fmt)
         except Exception:
-            return None
+            continue
+    return None
+
+
+def _cap_match(drone_capabilities: str, required: str) -> bool:
+    """True if required capability appears in drone's comma-separated capabilities (case-insensitive)."""
+    if not required or not drone_capabilities:
+        return False
+    parts = [p.strip().lower() for p in str(drone_capabilities).split(",")]
+    return required.strip().lower() in parts
 
 
 def _dates_overlap(s1: str, e1: str, s2: str, e2: str) -> bool:
@@ -142,8 +150,16 @@ def match_drones_to_mission(
         status="Available",
         exclude_maintenance=True,
     )
+    # Match capability: mission required_skills may be comma-separated; drone must have at least one
     if cap:
-        candidates = query_drones(candidates, capability=cap) if cap else candidates
+        caps = [c.strip() for c in cap.split(",") if c.strip()]
+        if caps:
+            matched = []
+            for d in candidates:
+                drone_caps = (d.get("capabilities") or "").strip()
+                if any(c and _cap_match(drone_caps, c) for c in caps):
+                    matched.append(d)
+            candidates = matched if matched else candidates
     if not candidates:
         candidates = query_drones(drones, location=loc if loc else None, exclude_maintenance=False)
 

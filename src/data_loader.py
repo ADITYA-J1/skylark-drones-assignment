@@ -91,14 +91,17 @@ def load_missions(client: Any = None) -> List[dict]:
 def load_assignments(client: Any = None) -> List[dict]:
     """
     Load assignments (project_id, pilot_id, drone_id, start_date, end_date).
-    If no sheet/CSV, derive from pilot/drone current_assignment and mission dates.
+    If no sheet/CSV, returns [] (caller can derive from roster + missions).
     """
     if not config.USE_LOCAL_CSV and client:
         sheet_id = config.GOOGLE_SHEET_ID_ASSIGNMENTS or config.SINGLE_SHEET_ID
         if sheet_id:
-            data = read_sheet_as_dicts(client, sheet_id, _sheet_name_assignments())
-            if data:
-                return data
+            try:
+                data = read_sheet_as_dicts(client, sheet_id, _sheet_name_assignments())
+                if data:
+                    return data
+            except RuntimeError:
+                pass  # fall back to CSV or []
     path = _csv_path("assignments")
     if os.path.exists(path):
         df = pd.read_csv(path)
